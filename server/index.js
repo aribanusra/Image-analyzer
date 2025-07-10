@@ -42,7 +42,7 @@ app.use('/api/', limiter);
 // CORS configuration
 app.use(cors({ 
   origin: process.env.CLIENT_URL || 'http://localhost:5173', 
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'], 
+  methods: ['GET', 'POST','PUT', 'DELETE', 'OPTIONS'], 
   credentials: true 
 }));
 
@@ -137,6 +137,75 @@ app.get('/api/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
 
     res.json({ user: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/profile (authenticated) - Update user profile
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    const { username, mobile } = req.body;
+    const userId = req.user.id;
+
+    if (!username || !mobile) {
+      return res.status(400).json({ error: 'Username and mobile are required' });
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET username = $1, mobile = $2 WHERE id = $3 RETURNING id, username, email, mobile',
+      [username, mobile, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/change-password (authenticated) - Change user password
+app.post('/api/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { current, new: newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!current || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+
+    // Get current user password
+    const userResult = await pool.query(
+      'SELECT password FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const match = await bcrypt.compare(current, userResult.rows[0].password);
+    if (!match) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password = $1 WHERE id = $2',
+      [hashedNewPassword, userId]
+    );
+
+    res.json({ message: 'Password changed successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
