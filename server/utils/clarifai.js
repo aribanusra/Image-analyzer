@@ -1,40 +1,57 @@
-import axios from 'axios';
+import { ClarifaiStub, grpc } from 'clarifai-nodejs-grpc';
+import dotenv from 'dotenv';
+dotenv.config(); // This must run before you use process.env
 
 const USER_ID = "ariba";
-const APP_ID = "image-analyzer";
-const PAT = "fe69e522a00b4a0394be4dce9c062552";
+const APP_ID = "image-analyzer-app"; // Using the correct app ID
+const PAT = process.env.CLARIFAI_API_KEY || 'b86fad7a542543bf88634c380a627df8'; // Fallback to hardcoded key
 
-// ✅ Use correct version ID of the model
+// Clarifai setup
+const stub = ClarifaiStub.grpc();
+const metadata = new grpc.Metadata();
+metadata.set('authorization', 'Key ' + PAT);
+
 const MODEL_ID = "general-image-recognition";
 const MODEL_VERSION_ID = "aa7f35c01e0642fda5cf400f543e7c40";
 
 const analyzeImage = async (base64Image) => {
-  const response = await axios.post(
-    `https://api.clarifai.com/v2/models/${MODEL_ID}/versions/${MODEL_VERSION_ID}/outputs`,
-    {
-      user_app_id: {
-        user_id: USER_ID,
-        app_id: APP_ID,
-      },
-      inputs: [
-        {
-          data: {
-            image: {
-              base64: base64Image,
+  return new Promise((resolve, reject) => {
+    stub.PostModelOutputs(
+      {
+        user_app_id: {
+          user_id: USER_ID,
+          app_id: APP_ID,
+        },
+        model_id: MODEL_ID,
+        version_id: MODEL_VERSION_ID,
+        inputs: [
+          {
+            data: {
+              image: {
+                base64: base64Image,
+              },
             },
           },
-        },
-      ],
-    },
-    {
-      headers: {
-        Authorization: `Key ${process.env.CLARIFAI_API_KEY}`, // ✅ This is correct for API key
-        'Content-Type': 'application/json',
+        ],
       },
-    }
-  );
+      metadata,
+      (err, response) => {
+        if (err) {
+          console.error('Clarifai gRPC error:', err);
+          reject(err);
+          return;
+        }
 
-  return response.data;
+        if (response.status.code !== 10000) {
+          console.error('Clarifai API failed:', response.status);
+          reject(new Error(`Clarifai API failed: ${response.status.description}`));
+          return;
+        }
+
+        resolve(response);
+      }
+    );
+  });
 };
 
 export default analyzeImage;

@@ -79,10 +79,11 @@ const Home = () => {
       });
       
       const uploadedImage = {
+        id: response.data.imageId, // Use the real imageId from backend
         image_name: response.data.filename,
         image_path: `/uploads/${response.data.filename}`,
         imageUrl: response.data.imageUrl,
-        labels: response.data.labels,
+        labels: null,
       };
       setImages((prev) => [uploadedImage, ...prev]); // Add to beginning for better UX
     } catch (error) {
@@ -94,8 +95,50 @@ const Home = () => {
   }, []);
 
   // Memoized analyze handler
-  const handleAnalyze = useCallback((img) => {
-    navigate(`/analyze/${encodeURIComponent(img.image_name)}`);
+  const handleAnalyze = useCallback(async (img) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You are not logged in');
+      return;
+    }
+
+    try {
+      // Show loading state
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = 'Analyzing...';
+      button.disabled = true;
+
+      // Trigger analysis
+      const response = await axios.post(`http://localhost:2222/api/analyze/${img.id}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Update the image in the list with new labels
+      setImages(prev => prev.map(image => 
+        image.id === img.id 
+          ? { ...image, labels: response.data.labels }
+          : image
+      ));
+
+      // Navigate to analyze page with the updated image data
+      navigate(`/analyze/${encodeURIComponent(img.image_name)}`, {
+        state: { 
+          img: { 
+            ...img, 
+            labels: response.data.labels 
+          } 
+        }
+      });
+    } catch (error) {
+      console.error('Analysis failed:', error.response?.data || error.message);
+      alert('Failed to analyze image: ' + (error.response?.data?.error || 'Something went wrong'));
+      
+      // Reset button state
+      const button = event.target;
+      button.textContent = 'Analyze Image';
+      button.disabled = false;
+    }
   }, [navigate]);
 
   return (

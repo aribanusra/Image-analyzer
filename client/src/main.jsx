@@ -6,7 +6,7 @@ import { Toaster } from 'sonner' // ✅ native Sonner import
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
-    <Toaster /> {/* ✅ visible */}
+      <App />
+      <Toaster /> {/* ✅ visible */}
   </StrictMode>,
 )

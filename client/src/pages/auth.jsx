@@ -33,12 +33,22 @@ const Auth = () => {
       setRegisterIsLoading(true);
       const res = await axios.post("http://localhost:2222/api/register", data);
       const result = res.data;
-      console.log("Register Response:", result);
   
       toast.success(result.message);
       setTab("login");
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Registration failed");
+      const errorData = err?.response?.data;
+      
+      // If it's a duplicate email error, show the message and switch to login tab
+      if (errorData?.error === 'Email already registered') {
+        toast.error(errorData.message || errorData.error);
+        setTab("login");
+        // Pre-fill the login form with the email
+        setlogin(prev => ({ ...prev, email: data.email }));
+      } else {
+        // For other errors, show the error message
+        toast.error(errorData?.message || errorData?.error || "Registration failed");
+      }
     } finally {
       setRegisterIsLoading(false);
     }
@@ -49,7 +59,6 @@ const Auth = () => {
       setLoginIsLoading(true);
       const res = await axios.post("http://localhost:2222/api/login", data);
       const result = res.data;
-      console.log(result);
       toast.success("Login successful");
       localStorage.setItem('token', result.token);
     

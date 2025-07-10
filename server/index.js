@@ -8,6 +8,7 @@ import validator from 'validator';
 import { authenticateToken } from './middleware/auth.js';
 import { validateRegister } from './utils/validation.js';
 import uploadRouter from './upload.js';
+import analyzeRouter from './analyze.js';
 import path from 'path';
 import fs from 'fs';
 import compression from 'compression';
@@ -56,6 +57,7 @@ const uploadsDir = path.resolve('uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
 app.use('/api/upload', uploadRouter);
+app.use('/api/analyze', analyzeRouter);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -69,7 +71,6 @@ app.use((err, req, res, next) => {
 // Register route
 app.post("/api/register", async (req, res) => {
   try {
-    console.log("Incoming Register Request:", req.body);
     const { error } = validateRegister(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
@@ -86,7 +87,20 @@ app.post("/api/register", async (req, res) => {
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
     console.error("Registration error:", err);
-    res.status(400).json("User already exists");
+    
+    // Check if it's a duplicate email error (PostgreSQL error code 23505)
+    if (err.code === '23505' && err.constraint === 'users_email_key') {
+      return res.status(400).json({ 
+        error: 'Email already registered',
+        message: 'An account with this email address already exists. Please try logging in instead.'
+      });
+    }
+    
+    // For other database errors
+    res.status(400).json({ 
+      error: 'Registration failed',
+      message: 'Unable to create account. Please try again.'
+    });
   }
 });
 

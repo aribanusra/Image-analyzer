@@ -3,10 +3,9 @@ import multer from 'multer';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
-import analyzeImage from './utils/clarifai.js';
-
 import { authenticateToken } from './middleware/auth.js';
 import { insertImageRecord, getUserImages, deleteImageRecord } from './uploadDb.js';
+import pool from './uploadDb.js';
 
 dotenv.config();
 
@@ -83,42 +82,39 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/upload (authenticated)
+// POST /api/upload (authenticated) - Upload image only
 router.post('/', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const userId = req.user.id;
     const filename = req.file.filename;
-    const imagePath = req.file.path;
 
-    // Read image as base64
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64Image = imageBuffer.toString('base64');
-
-    // Analyze image with Clarifai REST API
-    const response = await analyzeImage(base64Image);
-    if (!response || !response.outputs || !response.outputs[0].data.concepts) {
-      return res.status(500).json({ message: "Clarifai API error", error: "No concepts returned" });
+    // Verify user exists in database
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        message: 'User not found',
+        error: `User with ID ${userId} does not exist in database`
+      });
     }
-    const labels = response.outputs[0].data.concepts.map(c => c.name).join(', ');
 
-    // Save to PostgreSQL
-    await insertImageRecord({
+    // Save to PostgreSQL without analysis and get the real image id
+    const imageId = await insertImageRecord({
       user_id: userId,
       image_name: filename,
       image_path: `/uploads/${filename}`,
-      labels,
+      labels: null, // No labels initially
     });
 
     res.json({
-      message: 'Image uploaded and analyzed successfully',
+      message: 'Image uploaded successfully',
       filename,
       imageUrl: `http://localhost:2222/uploads/${filename}`,
-      labels,
+      imageId, // Return the real image ID for analysis
     });
   } catch (err) {
-    console.error(err);
+    console.error('Upload error:', err);
     res.status(500).json({
-      message: 'Error uploading or analyzing image',
+      message: 'Error uploading image',
       error: err.message,
     });
   }

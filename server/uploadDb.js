@@ -22,11 +22,12 @@ pool.on('error', (err) => {
 export const insertImageRecord = async ({ user_id, image_name, image_path, labels }) => {
   const client = await pool.connect();
   try {
-    await client.query(
+    const result = await client.query(
       `INSERT INTO upload (user_id, image_name, image_path, labels)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4) RETURNING id`,
       [user_id, image_name, image_path, labels]
     );
+    return result.rows[0].id;
   } finally {
     client.release();
   }
@@ -63,6 +64,22 @@ export const deleteImageRecord = async (imageId, userId) => {
        WHERE id = $1 AND user_id = $2 
        RETURNING image_name, image_path`,
       [imageId, userId]
+    );
+    return result.rows[0];
+  } finally {
+    client.release();
+  }
+};
+
+export const updateImageLabels = async (imageId, userId, labels) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE upload 
+       SET labels = $1 
+       WHERE id = $2 AND user_id = $3 
+       RETURNING id, image_name, labels`,
+      [labels, imageId, userId]
     );
     return result.rows[0];
   } finally {

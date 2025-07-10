@@ -21,14 +21,14 @@ function App() {
         <ToastContainer
           position="bottom-right"
           autoClose={2000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          pauseOnHover
-          draggable
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+        draggable
           theme="colored"
-        />
-      </main>
+      />
+    </main>
     </>
   )
 }

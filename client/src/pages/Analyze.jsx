@@ -13,6 +13,13 @@ const Analyze = () => {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    // If we have image data from navigation state, use it
+    if (location.state?.img) {
+      setImg(location.state.img);
+      return;
+    }
+    
+    // Otherwise, fetch from database
     if (!img && id) {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -30,7 +37,9 @@ const Analyze = () => {
         .catch(() => setImg(null))
         .finally(() => setLoading(false));
     }
-  }, [img, id]);
+  }, [img, id, location.state]);
+
+  // Remove the handleAnalyze function since analysis is done on home page
 
   const handleDelete = async () => {
     if (!img || !img.id) return;
@@ -110,7 +119,17 @@ const Analyze = () => {
           {/* Analysis result column */}
           <div className="bg-white rounded shadow p-6 flex flex-col items-center justify-center min-h-[24rem]">
             <h3 className="text-lg font-semibold mb-4 text-gray-700">Analysis Result</h3>
-            <div className="text-gray-500">{img.labels || '(Result will appear here)'}</div>
+            {img.labels ? (
+              <div className="text-gray-700 text-center">
+                <p className="mb-4 font-medium">Detected Objects:</p>
+                <p className="text-sm">{img.labels}</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-gray-500 mb-4">No analysis available</p>
+                <p className="text-xs text-gray-400">Go back to home page and click "Analyze Image" to analyze this image.</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
