@@ -1,9 +1,10 @@
-import { ToastContainer } from "react-toastify"
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Auth from "./pages/auth"
-import Home from "./pages/Home"
-import Profile from "./pages/Profile"
-import Analyze from "./pages/Analyze"
+import { ToastContainer } from "react-toastify";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Auth from "./pages/auth";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import Analyze from "./pages/Analyze";
+import PrivateRoute from "./components/Protectedroute";
 
 function App() {
   return (
@@ -12,25 +13,39 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/home" element={<Home />} />
+            <Route
+              path="/home"
+              element={
+                <PrivateRoute>
+                  <Home />
+                </PrivateRoute>
+              }
+            />
             <Route path="/profile" element={<Profile />} />
             <Route path="/analyze/:id" element={<Analyze />} />
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Home />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
         <ToastContainer
           position="bottom-right"
           autoClose={2000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        pauseOnHover
-        draggable
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnHover
+          draggable
           theme="colored"
-      />
-    </main>
+        />
+      </main>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +26,12 @@ const Auth = () => {
   const [tab, setTab] = useState("signup");
   const navigate = useNavigate();
 
-
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/home'); // or your actual dashboard route
+    }
+  }, [navigate]);
 
   const registerUser = async (data) => {
     try {
